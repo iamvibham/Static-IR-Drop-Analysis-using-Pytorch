@@ -10,7 +10,7 @@ This project focuses on performing static IR-Drop analysis, a critical step in t
 
 ## Installation
 1. Clone the repository:  
-git clone https://github.com/your-username/static-ir-drop-analysis.git
+git clone https://github.com/iamvibham/Static-IR-Drop-Analysis-using-Pytorch.git
 2. Install the required dependencies. 
 
 ## Usage
