@@ -2,8 +2,8 @@ import torch
 
 from netlist_parser import Netlist
 from solver import PesudoInvSolver, JacobiSolver, ConjugateGradientSolver
-
-
+ 
+# Starting the testing 
 def testOneSpice(spiceName):
     with torch.no_grad():
         n = Netlist()
@@ -31,6 +31,7 @@ def testOneSpice(spiceName):
 
 
 
+# Loading the Dataset
 if __name__ == '__main__':
     testOneSpice("data/ibmpg1")
     # testOneSpice("data/ibmpg2")

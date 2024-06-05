@@ -6,16 +6,17 @@ from utils import global_device, sparseMatmul, RMSE
 
 
 class AbstracrtSolver:
+    
     """
-    解线性方程Ax=b
+    Solve the linear equation Ax=b
     """
     def solve(self, A: torch.Tensor, b: torch.Tensor, sizeA: tuple, initialX: torch.Tensor = None):
         """
-        :param A: <Tensor t, 3>矩阵的稀疏表示，(行、列、值)
-        :param b: <Tensor n>向量
-        :param initialX: 可选，迭代法中初始化的向量
-        :param sizeA 长为2的tuple A矩阵的实际尺寸(n, m)
-        :return: <Tensor m>解
+        :param A: <Tensor t, 3> sparse representation of matrix, (rows, columns, values)
+        :param b: <Tensor n>vector
+        :param initialX: optional, vector initialized in iterative method
+        :param sizeA The actual size (n, m) of the tuple A matrix with length 2
+        :return: <Tensor m> solution
         """
         raise NotImplementedError()
 
@@ -46,8 +47,8 @@ class JacobiSolver(AbstracrtSolver):
         assert sizeA[0] == sizeA[1]
         dia = torch.zeros(sizeA[0], dtype=torch.float32, device=global_device)
         boolDiagonalInA = A[:,0]==A[:,1]
-        dia[A[boolDiagonalInA, 0].to(torch.int64)] = A[boolDiagonalInA, 2] # 对角元
-        A = A[~boolDiagonalInA] # A现在仅含有非对角元元素的稀疏表示
+        dia[A[boolDiagonalInA, 0].to(torch.int64)] = A[boolDiagonalInA, 2] # Diagonal element
+        A = A[~boolDiagonalInA] # A now contains only sparse representations of off-diagonal elements
         diff: float = 0.0
         iter = 0
 

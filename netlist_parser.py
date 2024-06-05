@@ -6,7 +6,7 @@ import torch
 
 from utils import global_device, strToNum, average, diagonalPreconditioned, RMSE, drawHeatmap
 
-# 用在Netlist.nodeLabel中，表示属于VDD还是GND哪一部分。
+# Used in Netlist.nodeLabel to indicate which part it belongs to: VDD or GND.
 L_VDD = 1
 L_GND = 0
 
@@ -16,11 +16,11 @@ class Netlist:
         self.SHORT_THRESHOLD = 1e-5
 
         self.nodenameDict: Dict[str, int] = {}
-        self.edges: List[List[Union[float, int]]] = []  # 数组元素必定是长为3的list，前两个表示节点的编号，第三个是电阻
-        self.nodeCurrents: List[float] = []  # 节点上电流源的总电流
-        self.nodeVoltages: List[float] = []  # 节点上附着的对地电压源电压（PS:本程序仅处理，所有电压源均是对地的VDD电压的情况。）
-        self.connectToVSource: List[bool] = []  # 节点的电压是否被电压源固定。
-        self.nodeLabel: List[int] = []  # 结点的分类标签。目前仅有VDD和GND两类。
+        self.edges: List[List[Union[float, int]]] = []  # The array elements must be a list with a length of 3. The first two represent the number of the node, and the third one is the resistor.
+        self.nodeCurrents: List[float] = []  # The total current of the current sources on the node
+        self.nodeVoltages: List[float] = []  # The voltage source to ground attached to the node (PS: This program only handles the case where all voltage sources are VDD voltage to ground.)
+        self.connectToVSource: List[bool] = []  # Whether the voltage of the node is fixed by the voltage source.
+        self.nodeLabel: List[int] = []  # The classification label of the node. Currently there are only two types: VDD and GND.
         self.shortedEdges: List[List[int]] = []
         self.quickReferenceFromNodeToEdge: Dict[int, List[List[Union[float, int]]]] = {}
 
@@ -28,7 +28,7 @@ class Netlist:
         self.L_GNDNodes: List[int] = []
         self.vddValue: float = 0.0
         self.groundTruth: Dict[str, float] = {}
-        # 以下是debug用的变量，与直接逻辑无关
+        # The following are variables used for debugging, which have nothing to do with direct logic.
         self.vddMapping: List[int] = []
         self.gndMapping: List[int] = []
         self.vddPlaneSize: int = 0
@@ -55,7 +55,7 @@ class Netlist:
 
                 if typechar == "V" or typechar == "v":
                     if lineValue != 0:
-                        # 是真正的电压源，登记。
+                        # is a true voltage source, registered.
                         self.nodeVoltages[a] = lineValue
                         self.connectToVSource[a] = True
                         self.connectToVSource[b] = True
@@ -63,33 +63,33 @@ class Netlist:
                         if lineValue > self.vddValue:
                             self.vddValue = lineValue
                     else:
-                        # 等同于短路
+                        # Equivalent to short circuit
                         self.shortedEdges.append([a, b])
                 elif typechar == "I" or typechar == "i":
-                    # 根据IBM Benchmark的描述，电流源必定是成对的，一个是x 0，一个是0 y。
+                    # According to the description of IBM Benchmark, the current sources must be in pairs, one is x 0 and the other is 0 y.
                     if nameB == "0":
                         self.nodeCurrents[a] += lineValue
                     elif nameA == "0":
                         self.nodeCurrents[b] -= lineValue
                 elif typechar == "R" or typechar == "r":
                     if lineValue > self.SHORT_THRESHOLD:
-                        # 是真正的电阻。
+                        # is a real resistor.
                         edge = [a, b, lineValue]
                         self.edges.append(edge)
                         self.quickReferenceFromNodeToEdge[a].append(edge)
                         self.quickReferenceFromNodeToEdge[b].append(edge)
                     else:
-                        # 等同于短路
+                        # Equivalent to short circuit
                         self.shortedEdges.append([a, b])
 
     def process_after_loadfile(self):
         """
         :return:
         """
-        # 合并所有短路节点。
-        # 总共分两步：1、根据短路边定义，重排edge序号等；2、删除短路节点，产生新的结点。
-        # 第一步
-        redirect_list = []  # 重定向表
+        # Merge all short circuit nodes.
+        # There are two steps in total: 1. Rearrange edge serial numbers according to the definition of short-circuit edges; 2. Delete short-circuit nodes and generate new nodes.
+        # First step
+        redirect_list = []  # Redirection table
         for i in range(len(self.nodenameDict)):
             redirect_list.append(i)
 
@@ -106,17 +106,17 @@ class Netlist:
             b = max(shortEdge[0], shortEdge[1])
             mergeTwo(a, b)
 
-        # 第二步
+        # The second step
         newNodesCount = 0
-        newNodeCurrents: List[float] = []  # 节点上电流源的总电流
-        newNodeVoltages: List[float] = []  # 节点上附着的对地电压源电压（PS:本程序仅处理，所有电压源均是对地的VDD电压的情况。）
-        newConnectToVSource: List[bool] = []  # 节点的电压是否被电压源固定。
-        newNodeLabel: List[int] = []  # 结点的分类标签。目前仅有VDD和GND两类。
+        newNodeCurrents: List[float] = []  #The total current of the current sources on the node
+        newNodeVoltages: List[float] = []  # The ground voltage source voltage attached to the node (PS: This program only handles the case where all voltage sources are VDD voltages to ground.)
+        newConnectToVSource: List[bool] = []  # Whether the voltage of the node is fixed by the voltage source。
+        newNodeLabel: List[int] = []  # The classification label of the node. Currently there are only two types: VDD and GND.
         newQuickReferenceFromNodeToEdge: Dict[int, List[List[Union[float, int]]]] = {}
 
         for i in range(len(redirect_list)):
             if redirect_list[i] == i:
-                # 是未被合并的节点
+                # is a node that has not been merged
                 redirect_list[i] = newNodesCount
                 newNodeCurrents.append(self.nodeCurrents[i])
                 newNodeVoltages.append(self.nodeVoltages[i])
@@ -147,7 +147,7 @@ class Netlist:
         self.nodeLabel = newNodeLabel
         self.quickReferenceFromNodeToEdge = newQuickReferenceFromNodeToEdge
 
-        # 按照广度优先搜索算法计算L_VDD集合。
+        # Calculate the L_VDD set according to the breadth-first search algorithm.
         queue = []
         visited = []
         for label, i in zip(self.nodeLabel, range(len(self.nodeLabel))):
@@ -172,10 +172,10 @@ class Netlist:
     def generateMatrix(self, preconditioned=True) -> Tuple[Tuple[torch.Tensor, torch.Tensor, List[int]],
                                                            Tuple[torch.Tensor, torch.Tensor, List[int]]]:
         """
-        最终要求解的线性方程为 AGA^T·u=AGU-I，记为B·u=c，本函数即是计算B和c并返回。
-        B是三元组格式<Tensor t,3>，c是<Tensor n>。t是B矩阵中非零元素稀疏表示。
-        mapping: List[int]是从全局的index到子集（例如VDD点集合、GND点集合）的index的映射）
-        :return: ((B,c,mapping),(B,c,mapping))前面是VDD，后面是GND。
+        The final linear equation to be solved is AGA^T·u=AGU-I, recorded as B·u=c. This function calculates B and c and returns them.
+        B is the triple format <Tensor t,3>, and c is <Tensor n>. t is the sparse representation of non-zero elements in the B matrix.
+        mapping: List[int] is the mapping from the global index to the index of the subset (such as VDD point set, GND point set))
+        :return: ((B,c,mapping),(B,c,mapping)) The front is VDD and the back is GND.
         """
         vddToSolve: List[int] = []
         gndToSolve: List[int] = []
@@ -200,8 +200,8 @@ class Netlist:
 
     def _generateBAndC(self, nodes: List[int]) -> Tuple[torch.Tensor, torch.Tensor, List[int]]:
         """
-        :param nodes: VDD或GND的节点集合，大小记为n
-        :return: （B: <Tensor t, 3>, C: <Tensor n>, mapping: List[int]是从全局index到vdd index的映射）
+        :param nodes: VDD or GND node set, the size is recorded as n
+        :return: (B: <Tensor t, 3>, C: <Tensor n>, mapping: List[int] is the mapping from global index to vdd index)
         """
         mapping = [-1] * len(self.nodeLabel)
         curI = 0
@@ -274,10 +274,10 @@ class Netlist:
     def generateFinalResult(self, vddRes: torch.Tensor, gndRes: torch.Tensor) -> Tuple[
         Dict[str, float], Union[float, None]]:
         """
-        把Tensor格式的结果数组转化为结点的字典。
-        :param vddRes: <Tensor n_vdd> n_vdd是vdd平面待定结点个数
-        :param gndRes: <Tensor n_gnd> n_gnd是gnd平面待定结点个数
-        :return: (计算结果-node名称到算出的电压值对应的字典， 均方误差开根号（RMSE）)
+        Convert the result array in Tensor format into a dictionary of nodes.
+        :param vddRes: <Tensor n_vdd> n_vdd is the number of undetermined nodes in the vdd plane
+        :param gndRes: <Tensor n_gnd> n_gnd is the number of undetermined nodes in the gnd plane
+        :return: (Calculation result - dictionary corresponding to node name to calculated voltage value, root mean square error (RMSE))
         """
         result = {}
         for nodename in self.nodenameDict:
@@ -291,7 +291,7 @@ class Netlist:
                     result[nodename] = gndRes[self.gndMapping[idx]].item()
         rmse = None
         if len(self.groundTruth) > 0:
-            # 计算RMSE
+            # Calculate RMSE
             gtArr = []
             resArr = []
             for nodename in result:
@@ -331,7 +331,7 @@ class Netlist:
 
     def groundtruthToResultTensor(self, type: str) -> torch.Tensor:
         """
-        :param type: "vdd"或"gnd"
+        :param type: "vdd" or "gnd"
         :return: <Tensor n>
         """
         if type == "vdd":

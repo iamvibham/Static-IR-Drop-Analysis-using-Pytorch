@@ -37,7 +37,7 @@ def diagonalPreconditioned(A: torch.Tensor, b: torch.tensor, sizeA: List[int]) -
     :param A:
     :param b:
     :param sizeA:
-    :return: 预条件化后的A、b、对角线
+    :return: preconditioned A, b, diagonal
     """
     dia = calculateDiagonal(A, sizeA)
     A[:, 2] = A[:, 2] / dia[A[:, 0].to(torch.int64)]
@@ -48,11 +48,11 @@ def diagonalPreconditioned(A: torch.Tensor, b: torch.tensor, sizeA: List[int]) -
 def sparseMatmul(A: torch.Tensor, x: torch.Tensor, sizeA: Union[List[int], Tuple[int, int]],
                  indexA=None) -> torch.Tensor:
     """
-    :param A: <Tensor t, 3> m*n的矩阵的稀疏表示
+    :param A: <Tensor t, 3> Sparse representation of m*n matrix
     :param x: <Tensor n>
-    :param sizeA: A的大小，即[m,n]
-    :param indexA: 可选，是A[:, 0:2].to(torch.int64)
-    :return: A*x（矩阵乘法）的结果 <Tensor m>
+    :param sizeA: The size of A, that is, [m,n]
+    :param indexA: optional, is A[:, 0:2].to(torch.int64)
+    :return: The result of A*x (matrix multiplication) <Tensor m>
     """
     indexA = indexA if indexA is not None else A[:, 0:2].to(torch.int64)
     item1 = A[:, 2] * x[indexA[:, 1]]
